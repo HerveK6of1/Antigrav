@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Terra Nova 2058 : Sprint Écologique 60s | Action-RPG Solarpunk</title>
+    <meta name="description" content="Défi 1 Minute Solarpunk ! Vous avez 60 secondes pour dépolluer un maximum de la biosphère, neutraliser les drones et obtenir le Rang S+.">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main id="game-wrapper">
+        <!-- Canvas de rendu principal -->
+        <canvas id="game-canvas"></canvas>
+
+        <!-- Overlay HUD Solarpunk -->
+        <div id="hud-overlay">
+            <!-- Haut : Stats du héros, CHRONO 60S, Jauge de Biome et Minimap -->
+            <header class="hud-top">
+                <div class="hud-player-stats" id="hud-player-stats-panel">
+                    <!-- Vie -->
+                    <div class="stat-row">
+                        <span class="stat-icon" style="color: #10b981;">PV</span>
+                        <div class="bar-wrapper">
+                            <div class="bar-fill hp-fill" id="hud-hp-bar" style="width: 100%;"></div>
+                            <span class="bar-label" id="hud-hp-text">120 / 120</span>
+                        </div>
+                    </div>
+                    <!-- Bio-Énergie Solaire -->
+                    <div class="stat-row">
+                        <span class="stat-icon" style="color: #38bdf8;">NRJ</span>
+                        <div class="bar-wrapper">
+                            <div class="bar-fill mp-fill" id="hud-mp-bar" style="width: 100%;"></div>
+                            <span class="bar-label" id="hud-mp-text">60 / 60</span>
+                        </div>
+                    </div>
+                    <!-- Métadonnées (Matières recyclées) -->
+                    <div class="hud-meta-row">
+                        <div class="gold-counter">
+                            <span>♻️</span>
+                            <span id="hud-gold-count">50</span>
+                            <span style="font-size: 10px; color: #94a3b8; font-weight: normal;">Éco-Crédits</span>
+                        </div>
+                        <div id="hud-key-indicator" class="key-badge hidden">
+                            ☀️ Bioclé
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CHRONOMÈTRE PALPITANT 60 SECONDES (CENTRE) -->
+                <div class="hud-center-group">
+                    <div id="hud-timer-badge" class="hud-timer-badge" title="Temps restant dans ce sprint écologique">
+                        <span class="timer-icon">⏱️</span>
+                        <span id="hud-timer-text">01:00</span>
+                    </div>
+
+                    <!-- JAUGE DE BIORÉGÉNÉRATION DU BIOME -->
+                    <div class="hud-biome-tracker" id="hud-biome-panel">
+                        <div class="biome-header">RESTAURATION DE LA BIOSPHÈRE</div>
+                        <div class="bar-wrapper biome-bar-wrap">
+                            <div class="bar-fill biome-fill" id="hud-biome-fill" style="width: 0%;"></div>
+                            <span class="bar-label" id="hud-biome-text">Pureté : 0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Suivi de Mission Écologique & Minimap -->
+                <div class="hud-right-group">
+                    <div class="hud-minimap-container" id="hud-minimap-wrapper">
+                        <canvas id="minimap-canvas" width="140" height="100"></canvas>
+                    </div>
+                </div>
+            </header>
+
+            <!-- NOTIFICATION RADIO HOLOGRAPHIQUE EN TEMPS RÉEL -->
+            <div id="hud-radio-transmission" class="radio-transmission-box hidden">
+                <span class="radio-avatar" id="radio-avatar">📻</span>
+                <div class="radio-content">
+                    <div class="radio-speaker" id="radio-speaker">Dr. Solène Vane</div>
+                    <div class="radio-text" id="radio-text">Message radio entrant...</div>
+                </div>
+            </div>
+
+            <!-- Bas : Barre de Sorts & Capacités de Régénération -->
+            <footer class="hud-bottom">
+                <div class="quickbar" id="hud-action-bar">
+                    <div class="action-slot" id="touch-btn-attack" title="Impulsion Biorésonante (Clic G / Espace)">
+                        <span class="slot-icon">🌿</span>
+                        <span class="slot-key">CLIC G</span>
+                    </div>
+
+                    <div class="action-slot" id="touch-btn-fire" title="Spores de Mycélium (Clic D / A ou Q)">
+                        <div class="cd-overlay" id="spell-fire-cd"></div>
+                        <span class="slot-icon">🌱</span>
+                        <span class="slot-key">A / Q</span>
+                    </div>
+
+                    <div class="action-slot" id="touch-btn-frost" title="Éclosion Florale Solaire (Z ou W)">
+                        <div class="cd-overlay" id="spell-frost-cd"></div>
+                        <span class="slot-icon">🌸</span>
+                        <span class="slot-key">Z / W</span>
+                    </div>
+
+                    <div class="action-slot" id="touch-btn-dash" title="Hydro-Glisse (Espace / Maj)">
+                        <div class="cd-overlay" id="spell-dash-cd"></div>
+                        <span class="slot-icon">💧</span>
+                        <span class="slot-key">ESPACE</span>
+                    </div>
+
+                    <div class="action-slot" id="hud-potion-hp" title="Bio-Gel Nutritif (Touche 1)">
+                        <span class="slot-icon">🍃</span>
+                        <span class="slot-key">1</span>
+                        <span class="slot-badge" id="potion-hp-count" style="background: #10b981;">3</span>
+                    </div>
+
+                    <div class="action-slot" id="hud-potion-mp" title="Cellule Solaire (Touche 2)">
+                        <span class="slot-icon">⚡</span>
+                        <span class="slot-key">2</span>
+                        <span class="slot-badge" id="potion-mp-count" style="background: #0284c7;">2</span>
+                    </div>
+                </div>
+
+                <!-- Utilitaires Solarpunk & Journal d'Histoire -->
+                <div class="hud-utility-buttons">
+                    <button id="journal-toggle-btn" class="hud-btn" title="Chronique Vivante de l'Histoire (Touche J)">📜</button>
+                    <button id="inventory-toggle-btn" class="hud-btn" title="Éco-Inventaire (I ou B)">🎒</button>
+                    <button id="help-toggle-btn" class="hud-btn" title="Commandes & Objectifs (?)">❔</button>
+                    <button id="audio-toggle-btn" class="hud-btn" title="Activer / Couper la musique">🔊</button>
+                </div>
+            </footer>
+        </div>
+
+        <!-- MODALE BILAN DU SPRINT 60 SECONDES (RANG & SCORE ÉCOLOGIQUE) -->
+        <div id="sprint-end-modal" class="modal-overlay hidden">
+            <div class="modal-content sprint-result-box">
+                <h2 class="sprint-result-title">TEMPS ÉCOULÉ ! (60 SECONDES)</h2>
+                <p style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Voici le bilan de votre intervention de régénération éclair :</p>
+                
+                <!-- Badge de Rang Géant (S+, A, B, C) -->
+                <div class="sprint-grade-container">
+                    <div class="sprint-grade-badge" id="sprint-grade-badge">S+</div>
+                    <div class="sprint-title-badge" id="sprint-title-stat">Maître Éco-Régénérateur</div>
+                </div>
+
+                <div class="sprint-stats-grid">
+                    <div class="sprint-stat-card">
+                        <span class="sprint-stat-label">Pureté du Biome</span>
+                        <span class="sprint-stat-val" id="sprint-purity-stat" style="color: #10b981;">0%</span>
+                    </div>
+                    <div class="sprint-stat-card">
+                        <span class="sprint-stat-label">Drones Dépollués</span>
+                        <span class="sprint-stat-val" id="sprint-kills-stat" style="color: #38bdf8;">0</span>
+                    </div>
+                    <div class="sprint-stat-card">
+                        <span class="sprint-stat-label">Matières Recyclées</span>
+                        <span class="sprint-stat-val" id="sprint-gold-stat" style="color: #fbbf24;">0</span>
+                    </div>
+                </div>
+
+                <button id="sprint-restart-btn" class="cta-btn" style="margin-top: 14px;">NOUVEAU SPRINT 60S (REJOUER)</button>
+            </div>
+        </div>
+
+        <!-- MODALE JOURNAL DE BORD NARRATIF (HISTOIRE ÉVOLUTIVE) -->
+        <div id="journal-modal" class="modal-overlay hidden">
+            <div class="modal-content journal-modal-box">
+                <div class="modal-header">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 22px;">📜</span>
+                        <h2 class="modal-title">Chronique Vivante de Terra Nova</h2>
+                    </div>
+                    <button id="close-journal-btn" class="modal-close-btn">&times;</button>
+                </div>
+
+                <div class="story-destiny-banner">
+                    <div>
+                        <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase;">Alignement :</span>
+                        <strong id="story-alignment-text" style="color: #34d399; margin-left: 6px;">Harmonie Écologique</strong>
+                    </div>
+                    <div>
+                        <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase;">Karma :</span>
+                        <strong id="story-karma-text" style="color: #fbbf24; margin-left: 6px;">15 pts</strong>
+                    </div>
+                </div>
+
+                <div class="journal-tabs">
+                    <button id="tab-btn-log" class="journal-tab-btn active-tab">📖 Histoire Vivante</button>
+                    <button id="tab-btn-archives" class="journal-tab-btn">🗂️ Archives Retrouvées</button>
+                </div>
+
+                <div id="journal-view-log" class="journal-view-panel">
+                    <div id="story-log-list" class="story-timeline-list"></div>
+                </div>
+
+                <div id="journal-view-archives" class="journal-view-panel hidden">
+                    <div id="story-archives-list" class="archives-grid-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modale Éco-Inventaire -->
+        <div id="inventory-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">Équipement & Modules de Biorégénération</h2>
+                    <button id="close-inventory-btn" class="modal-close-btn">&times;</button>
+                </div>
+                <div class="inventory-layout">
+                    <div class="inventory-left">
+                        <div class="equipment-slots-group">
+                            <div class="equipment-slot" id="equip-weapon-slot"></div>
+                            <div class="equipment-slot" id="equip-armor-slot"></div>
+                            <div class="equipment-slot" id="equip-relic-slot"></div>
+                        </div>
+
+                        <div class="player-stats-panel">
+                            <div class="stat-item"><span>Fréquence Biorésonante</span><span id="inv-stat-atk">26</span></div>
+                            <div class="stat-item"><span>Filtration Smog</span><span id="inv-stat-def">3</span></div>
+                            <div class="stat-item"><span>Vitalité Max</span><span id="inv-stat-hp">120</span></div>
+                            <div class="stat-item"><span>Énergie Solaire Max</span><span id="inv-stat-mp">60</span></div>
+                        </div>
+                    </div>
+
+                    <div class="inventory-right">
+                        <div class="inventory-grid" id="inventory-grid"></div>
+                        <div id="item-details-panel" style="margin-top: 12px;">
+                            <div class="detail-header item-common">
+                                <span class="detail-name">Sélectionnez un éco-composant</span>
+                            </div>
+                            <div class="detail-desc">Cliquez sur un composant pour l'intégrer à votre équipement.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modale Guide des Commandes Solarpunk -->
+        <div id="help-modal" class="modal-overlay hidden">
+            <div class="modal-content endgame-modal">
+                <div class="modal-header">
+                    <h2 class="modal-title">Guide du Sprint 60s</h2>
+                    <button id="close-help-btn" class="modal-close-btn">&times;</button>
+                </div>
+                <div class="controls-grid" style="margin-top: 10px;">
+                    <div class="control-item"><span>Déplacement</span><span class="key-tag">Z Q S D / Flèches</span></div>
+                    <div class="control-item"><span>Onde Purificatrice</span><span class="key-tag">Clic G / Espace</span></div>
+                    <div class="control-item"><span>Spores de Mycélium</span><span class="key-tag">Clic D / A ou Q</span></div>
+                    <div class="control-item"><span>Éclosion Solaire</span><span class="key-tag">Z ou W</span></div>
+                    <div class="control-item"><span>Hydro-Glisse (Dash)</span><span class="key-tag">Espace / Maj</span></div>
+                    <div class="control-item"><span>Chronique de l'Histoire</span><span class="key-tag">Touche J</span></div>
+                    <div class="control-item"><span>Bio-Gel (+55 PV)</span><span class="key-tag">Touche 1</span></div>
+                    <div class="control-item"><span>Pile Solaire (+45 NRJ)</span><span class="key-tag">Touche 2</span></div>
+                    <div class="control-item"><span>Éco-Inventaire</span><span class="key-tag">Touche I / B</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modale Défaite -->
+        <div id="gameover-modal" class="modal-overlay hidden">
+            <div class="modal-content endgame-modal">
+                <h2 class="endgame-title defeat-title">SYSTÈMES SUBMERGÉS...</h2>
+                <p style="color: #94a3b8; font-size: 14px;">Les fumées toxiques ont saturé vos filtres respiratoires.</p>
+                <button id="restart-btn" class="cta-btn" style="margin-top: 14px;">NOUVEAU SPRINT (REJOUER)</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts du Jeu Solarpunk & Moteur Narratif Dynamique -->
+    <script src="js/audio.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/story.js"></script>
+    <script src="js/particles.js"></script>
+    <script src="js/sprites.js"></script>
+    <script src="js/dungeon.js"></script>
+    <script src="js/entities.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>
